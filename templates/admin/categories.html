@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Category Management - QuickDesk{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">
+                <i class="fas fa-tags me-2"></i>Category Management
+            </h2>
+        </div>
+
+        <!-- Add New Category -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>Add New Category
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Category Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       required placeholder="Enter category name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="3" placeholder="Enter category description"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add Category
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Categories List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">All Categories</h5>
+            </div>
+            <div class="card-body">
+                {% if categories %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Created</th>
+                                    <th>Tickets</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                    <tr>
+                                        <td>{{ category.id }}</td>
+                                        <td>
+                                            <strong>{{ category.name }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if category.description %}
+                                                {{ category.description[:50] }}{% if category.description|length > 50 %}...{% endif %}
+                                            {% else %}
+                                                <span class="text-muted">No description</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ category.created_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ category.tickets|length }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" onclick="viewCategoryDetails({{ category.id }})">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-warning" onclick="editCategory({{ category.id }})">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                {% if category.tickets|length == 0 %}
+                                                    <button class="btn btn-outline-danger" onclick="deleteCategory({{ category.id }}, '{{ category.name }}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-outline-danger" disabled title="Cannot delete category with tickets">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No categories found</h5>
+                        <p class="text-muted">Create your first category to get started!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="sidebar">
+            <h6 class="mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Category Statistics
+            </h6>
+            
+            <div class="mb-3">
+                <strong>Total Categories:</strong><br>
+                <span class="text-muted">{{ categories|length }}</span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Most Used Category:</strong><br>
+                {% set most_used = categories|sort(attribute='tickets|length', reverse=true)|first %}
+                {% if most_used %}
+                    <span class="text-muted">{{ most_used.name }} ({{ most_used.tickets|length }} tickets)</span>
+                {% else %}
+                    <span class="text-muted">No categories</span>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <strong>Total Tickets:</strong><br>
+                <span class="text-muted">{{ categories|sum(attribute='tickets|length') }}</span>
+            </div>
+            
+            <hr>
+            
+            <h6 class="mb-3">Category Usage</h6>
+            {% for category in categories %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ category.name }}</span>
+                    <span class="badge bg-primary">{{ category.tickets|length }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Category Details Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Category Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="categoryModalBody">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the category "<span id="categoryName"></span>"?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Category</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewCategoryDetails(categoryId) {
+    // This would typically make an AJAX call to get category details
+    document.getElementById('categoryModalBody').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-tag fa-3x text-primary mb-3"></i>
+            <h5>Category Details</h5>
+            <p class="text-muted">Detailed category information would be displayed here.</p>
+            <p>Category ID: ${categoryId}</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+    modal.show();
+}
+
+function editCategory(categoryId) {
+    // This would typically redirect to an edit page or show an edit modal
+    alert('Edit functionality would be implemented here for category ID: ' + categoryId);
+}
+
+function deleteCategory(categoryId, categoryName) {
+    document.getElementById('categoryName').textContent = categoryName;
+    document.getElementById('deleteForm').action = `/admin/category/${categoryId}/delete`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %} 

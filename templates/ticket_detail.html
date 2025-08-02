@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket #{{ ticket.id }} - QuickDesk{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Ticket Header -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">
+                        <i class="fas fa-ticket-alt me-2"></i>#{{ ticket.id }} - {{ ticket.subject }}
+                    </h4>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="status-badge status-{{ ticket.status }}">
+                        {{ ticket.status.replace('_', ' ').title() }}
+                    </span>
+                    <span class="priority-badge priority-{{ ticket.priority }}">
+                        {{ ticket.priority.title() }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-user me-2"></i><strong>Created by:</strong> {{ ticket.author.username }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-tag me-2"></i><strong>Category:</strong> {{ ticket.category.name }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-clock me-2"></i><strong>Created:</strong> {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-calendar me-2"></i><strong>Updated:</strong> {{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-comments me-2"></i><strong>Comments:</strong> {{ ticket.comments|length }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-paperclip me-2"></i><strong>Attachments:</strong> {{ ticket.attachments|length }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Voting -->
+                <div class="vote-buttons mb-3">
+                    <button class="vote-btn" onclick="voteTicket({{ ticket.id }}, 'upvote')">
+                        <i class="fas fa-thumbs-up"></i> {{ ticket.upvotes }}
+                    </button>
+                    <button class="vote-btn" onclick="voteTicket({{ ticket.id }}, 'downvote')">
+                        <i class="fas fa-thumbs-down"></i> {{ ticket.downvotes }}
+                    </button>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-align-left me-2"></i>Description</h6>
+                    <div class="border rounded p-3 bg-light">
+                        {{ ticket.description|nl2br }}
+                    </div>
+                </div>
+
+                <!-- Attachments -->
+                {% if ticket.attachments %}
+                    <div class="mb-4">
+                        <h6><i class="fas fa-paperclip me-2"></i>Attachments</h6>
+                        <div class="row g-2">
+                            {% for attachment in ticket.attachments %}
+                                <div class="col-md-4">
+                                    <div class="border rounded p-2">
+                                        <i class="fas fa-file me-2"></i>
+                                        <a href="{{ url_for('uploaded_file', filename=attachment.filename) }}" 
+                                           target="_blank" class="text-decoration-none">
+                                            {{ attachment.original_filename }}
+                                        </a>
+                                        <small class="text-muted d-block">
+                                            {{ attachment.created_at.strftime('%Y-%m-%d') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Status Update (Agents/Admin only) -->
+                {% if current_user.role in ['agent', 'admin'] %}
+                    <div class="mb-4">
+                        <h6><i class="fas fa-edit me-2"></i>Update Status</h6>
+                        <form method="POST" action="{{ url_for('update_ticket_status', ticket_id=ticket.id) }}" class="d-flex gap-2">
+                            <select name="status" class="form-select" style="max-width: 200px;">
+                                <option value="open" {{ 'selected' if ticket.status == 'open' }}>Open</option>
+                                <option value="in_progress" {{ 'selected' if ticket.status == 'in_progress' }}>In Progress</option>
+                                <option value="resolved" {{ 'selected' if ticket.status == 'resolved' }}>Resolved</option>
+                                <option value="closed" {{ 'selected' if ticket.status == 'closed' }}>Closed</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="comment-section">
+            <h5 class="mb-3">
+                <i class="fas fa-comments me-2"></i>Comments ({{ ticket.comments|length }})
+            </h5>
+
+            <!-- Add Comment -->
+            <form method="POST" action="{{ url_for('add_comment', ticket_id=ticket.id) }}" class="mb-4">
+                <div class="mb-3">
+                    <label for="content" class="form-label">Add a comment</label>
+                    <textarea class="form-control" id="content" name="content" rows="3" 
+                              placeholder="Type your comment here..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Post Comment
+                </button>
+            </form>
+
+            <!-- Comments List -->
+            {% if ticket.comments %}
+                {% for comment in ticket.comments %}
+                    <div class="comment">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>{{ comment.author.username }}</strong>
+                                <span class="text-muted ms-2">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </div>
+                            {% if comment.author.role != 'user' %}
+                                <span class="badge bg-primary">{{ comment.author.role.title() }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="comment-content">
+                            {{ comment.content|nl2br }}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-comments fa-2x mb-2"></i>
+                    <p>No comments yet. Be the first to comment!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="sidebar">
+            <h6 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>Ticket Information
+            </h6>
+            
+            <div class="mb-3">
+                <strong>Status:</strong>
+                <span class="status-badge status-{{ ticket.status }} ms-2">
+                    {{ ticket.status.replace('_', ' ').title() }}
+                </span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Priority:</strong>
+                <span class="priority-badge priority-{{ ticket.priority }} ms-2">
+                    {{ ticket.priority.title() }}
+                </span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Category:</strong><br>
+                <span class="text-muted">{{ ticket.category.name }}</span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Created:</strong><br>
+                <span class="text-muted">{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Last Updated:</strong><br>
+                <span class="text-muted">{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Comments:</strong><br>
+                <span class="text-muted">{{ ticket.comments|length }} comment(s)</span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Attachments:</strong><br>
+                <span class="text-muted">{{ ticket.attachments|length }} file(s)</span>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Votes:</strong><br>
+                <span class="text-muted">
+                    <i class="fas fa-thumbs-up text-success"></i> {{ ticket.upvotes }} upvotes<br>
+                    <i class="fas fa-thumbs-down text-danger"></i> {{ ticket.downvotes }} downvotes
+                </span>
+            </div>
+            
+            <hr>
+            
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+                {% if current_user.role == 'user' and ticket.user_id == current_user.id %}
+                    <a href="{{ url_for('new_ticket') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create New Ticket
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function voteTicket(ticketId, voteType) {
+    fetch(`/ticket/${ticketId}/vote`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `vote_type=${voteType}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update vote counts in the UI
+        const voteButtons = document.querySelectorAll('.vote-btn');
+        voteButtons.forEach(button => {
+            if (button.innerHTML.includes('thumbs-up')) {
+                button.innerHTML = `<i class="fas fa-thumbs-up"></i> ${data.upvotes}`;
+            } else if (button.innerHTML.includes('thumbs-down')) {
+                button.innerHTML = `<i class="fas fa-thumbs-down"></i> ${data.downvotes}`;
+            }
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Auto-resize textarea
+document.getElementById('content').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}New Ticket - QuickDesk{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>Create New Ticket
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">Subject *</label>
+                                <input type="text" class="form-control" id="subject" name="subject" 
+                                       required placeholder="Brief description of your issue">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category *</label>
+                        <select class="form-select" id="category_id" name="category_id" required>
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description *</label>
+                        <textarea class="form-control" id="description" name="description" rows="6" 
+                                  required placeholder="Please provide detailed information about your issue..."></textarea>
+                        <div class="form-text">
+                            Be as specific as possible to help us resolve your issue quickly.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="attachments" class="form-label">Attachments</label>
+                        <input type="file" class="form-control" id="attachments" name="attachments" 
+                               multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                        <div class="form-text">
+                            You can attach multiple files (PDF, DOC, images, etc.) up to 16MB total.
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Ticket
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>Tips for Better Support
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Before submitting:</h6>
+                        <ul class="mb-0">
+                            <li>Check if your issue has already been reported</li>
+                            <li>Include relevant error messages or screenshots</li>
+                            <li>Describe the steps to reproduce the issue</li>
+                            <li>Mention your system/environment details</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Priority guidelines:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Low:</strong> Minor issues, feature requests</li>
+                            <li><strong>Medium:</strong> Standard bugs, general questions</li>
+                            <li><strong>High:</strong> Major functionality issues</li>
+                            <li><strong>Urgent:</strong> System down, security issues</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// File upload preview
+document.getElementById('attachments').addEventListener('change', function(e) {
+    const files = e.target.files;
+    let totalSize = 0;
+    
+    for (let file of files) {
+        totalSize += file.size;
+    }
+    
+    // Check file size (16MB limit)
+    if (totalSize > 16 * 1024 * 1024) {
+        alert('Total file size exceeds 16MB limit. Please select smaller files.');
+        this.value = '';
+    }
+});
+
+// Auto-resize textarea
+document.getElementById('description').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+</script>
+{% endblock %} 
